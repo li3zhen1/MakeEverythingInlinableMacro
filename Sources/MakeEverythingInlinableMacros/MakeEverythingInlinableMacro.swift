@@ -3,28 +3,6 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-/// Implementation of the `stringify` macro, which takes an expression
-/// of any type and produces a tuple containing the value of that expression
-/// and the source code that produced the value. For example
-///
-///     #stringify(x + y)
-///
-///  will expand to
-///
-///     (x + y, "x + y")
-public struct StringifyMacro: ExpressionMacro {
-    public static func expansion(
-        of node: some FreestandingMacroExpansionSyntax,
-        in context: some MacroExpansionContext
-    ) -> ExprSyntax {
-        guard let argument = node.arguments.first?.expression else {
-            fatalError("compiler bug: the macro does not have any arguments")
-        }
-
-        return "(\(argument), \(literal: argument.description))"
-    }
-}
-
 extension VariableDeclSyntax {
     var containsAccessor: Bool {
         for binding in self.bindings {
@@ -45,11 +23,37 @@ extension TypeAliasDeclSyntax: HasAccessLevelModifier { }
 extension VariableDeclSyntax: HasAccessLevelModifier { }
 extension StructDeclSyntax: HasAccessLevelModifier { }
 
-public struct MakeEverythingInlinableMacro: MemberAttributeMacro {
-    public static func expansion(of node: some SwiftSyntax.FreestandingMacroExpansionSyntax, in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.DeclSyntax] {
-        return []
+enum AccessLevelModifier: Int, Comparable {
+
+    case `private`
+    case `fileprivate`
+
+    case `internal`
+    case `package`
+
+    case `public`
+
+
+    static func < (lhs: AccessLevelModifier, rhs: AccessLevelModifier) -> Bool {
+        return lhs.rawValue < rhs.rawValue
     }
-    
+
+    static func makeCanonical(from modifiers: DeclModifierListSyntax) -> AccessLevelModifier {
+        for modifier in modifiers {
+            switch modifier.name.tokenKind {
+            case .keyword(.public): return .public
+            case .keyword(.package): return .package
+            case .keyword(.internal): return .internal
+            case .keyword(.fileprivate): return .fileprivate
+            case .keyword(.private): return .private
+            default: break
+            }
+        }
+        return .internal
+    }
+}
+
+public struct MakeEverythingInlinableMacro: MemberAttributeMacro {
     
     enum AddedAttribute {
         case inlinable
@@ -68,35 +72,18 @@ public struct MakeEverythingInlinableMacro: MemberAttributeMacro {
         }
         
         static func makeFromStoredPropertyOrType(_ syntax: some HasAccessLevelModifier) -> Self? {
-            for modifier in syntax.modifiers {
-                switch modifier.name.tokenKind {
-                case .keyword(.package): fallthrough
-                case .keyword(.internal): return .usableFromInline
-                    
-                case .keyword(.public): fallthrough
-                case .keyword(.fileprivate): fallthrough
-                case .keyword(.private): return nil
-                    
-                default:
-                    break
-                }
+            // FIXME: - init accessor is always <= internal
+            let accessLevel = AccessLevelModifier.makeCanonical(from: syntax.modifiers)
+            if accessLevel <= .fileprivate || accessLevel == .public {
+                return nil
             }
             return .usableFromInline
         }
         
         static func makeFromFunctionDeclOrAccessors(_ syntax: some HasAccessLevelModifier) -> Self? {
-            for modifier in syntax.modifiers {
-                switch modifier.name.tokenKind {
-                case .keyword(.package): fallthrough
-                case .keyword(.internal): fallthrough
-                case .keyword(.public): return .inlinable
-                    
-                case .keyword(.fileprivate): fallthrough
-                case .keyword(.private): return nil
-                    
-                default:
-                    break
-                }
+            let accessLevel = AccessLevelModifier.makeCanonical(from: syntax.modifiers)
+            if accessLevel <= .fileprivate {
+                return nil
             }
             return .inlinable
         }
@@ -124,7 +111,7 @@ public struct MakeEverythingInlinableMacro: MemberAttributeMacro {
             resultAttribute = [.makeFromStoredPropertyOrType(typealiasDecl)]
         } else if let structDecl = member.as(StructDeclSyntax.self) {
             resultAttribute = [
-                .makeEverythingInliable,
+//                .makeEverythingInliable // recursive expansion
                 .makeFromStoredPropertyOrType(structDecl),
             ]
         }
@@ -136,7 +123,6 @@ public struct MakeEverythingInlinableMacro: MemberAttributeMacro {
 @main
 struct MakeEverythingInlinablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        StringifyMacro.self,
         MakeEverythingInlinableMacro.self,
     ]
 }

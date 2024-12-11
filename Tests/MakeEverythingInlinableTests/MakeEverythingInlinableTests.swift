@@ -9,7 +9,6 @@ import XCTest
 import MakeEverythingInlinableMacros
 
 let testMacros: [String: Macro.Type] = [
-    "stringify": StringifyMacro.self,
     "MakeEverythingInlinable": MakeEverythingInlinableMacro.self
 ]
 #endif
