@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:MakeEverythingInlinable}",
+            "name": "Debug MakeEverythingInlinableClient",
+            "program": "${workspaceFolder:MakeEverythingInlinable}/.build/debug/MakeEverythingInlinableClient",
+            "preLaunchTask": "swift: Build Debug MakeEverythingInlinableClient"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:MakeEverythingInlinable}",
+            "name": "Release MakeEverythingInlinableClient",
+            "program": "${workspaceFolder:MakeEverythingInlinable}/.build/release/MakeEverythingInlinableClient",
+            "preLaunchTask": "swift: Build Release MakeEverythingInlinableClient"
+        }
+    ]
+}
