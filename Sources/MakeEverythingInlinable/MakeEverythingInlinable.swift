@@ -11,5 +11,5 @@
 public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "MakeEverythingInlinableMacros", type: "StringifyMacro")
 
 
-@attached(member)
+@attached(memberAttribute)
 public macro MakeEverythingInlinable() = #externalMacro(module: "MakeEverythingInlinableMacros", type: "MakeEverythingInlinableMacro")

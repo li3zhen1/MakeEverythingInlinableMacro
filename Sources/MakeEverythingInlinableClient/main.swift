@@ -1,8 +1,14 @@
 import MakeEverythingInlinable
 
-let a = 17
-let b = 25
+@usableFromInline
+@MakeEverythingInlinable
+struct Foo {
+    private var foo: Int
+    
+    var bar: Int
+    
+    public var baz: Int {
+        bar + 1
+    }
+}
 
-let (result, code) = #stringify(a + b)
-
-print("The value \(result) was produced by the code \"\(code)\"")
